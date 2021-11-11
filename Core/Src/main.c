@@ -62,6 +62,7 @@
   /*---------------------------------------------------------------------*/
   /*  USB SM def                                                    */
   /*---------------------------------------------------------------------*/
+#define DAC_MODEL  2758 // OR 2752. 2758:18bit 2752: 16bit
 #define SET_OUTPUT_VOLTAGE_1              0x01U
 #define SET_OUTPUT_VOLTAGE_2              0x02U
 
@@ -175,7 +176,10 @@ uint32_t dac_send=0x00;
 
 /*ADC and DAC conversion formula*/
 float adc_conv_f=5.0F/2097150.0F;
-float dac_conv = 65535.0F/5.0F;//for 16bit DAC
+
+float dac_conv_16bit = 65535.0F/5.0F;//for 16bit DAC
+float dac_conv_18bit = 262143.0F/5.0F;//for 18bit DAC
+float dac_conv = 262143.0F/5.0F;
 
 //State machine
 uint32_t sm=0;
@@ -941,6 +945,7 @@ void dual_PID()
 
 }
 
+/*
 void SET_VOLT_DAC_1(float voltage)
 {
 
@@ -950,6 +955,24 @@ void SET_VOLT_DAC_1(float voltage)
 
 
 	HAL_SPI1_TransmitReceive_HM_fast(&hspi1, &dac_send, pRxData, 1);
+}
+*/
+
+void SET_VOLT_DAC_1(float voltage)
+{
+
+	dac_set = (voltage*dac_conv);
+	//dac_send = WriteCode_Update_A<<16|dac_set;
+	//GPIOB->ODR ^= (1 );
+	if (DAC_MODEL == 2752)
+		{
+			dac_send = WriteCode_Update_A<<16|dac_set;
+		}
+	else if (DAC_MODEL == 2758){
+			dac_send = WriteCode_Update_A << 24 | dac_set<<6;
+	}
+	HAL_SPI1_TransmitReceive_HM_fast(&hspi1, &dac_send, pRxData, 1);
+
 }
 
 void SET_VOLT_DAC_1_bits(uint32_t send_dac_set)
@@ -961,8 +984,15 @@ void SET_VOLT_DAC_1_bits(uint32_t send_dac_set)
 
 void SET_SPAN_DAC_1(uint8_t setspan)
 {
-	  DAC_command=WriteSpan_A<<16|setspan;
-	  HAL_SPI1_TransmitReceive_HM_fast(&hspi1,&DAC_command, pRxData, 1);
+	if (DAC_MODEL == 2752)
+		{
+			DAC_command=WriteSpan_A<<16|setspan;
+		}
+	else if (DAC_MODEL == 2758){
+		DAC_command=WriteSpan_A<<24| setspan << 8 ;
+	}
+	HAL_SPI1_TransmitReceive_HM_fast(&hspi1,&DAC_command, pRxData, 1);
+
 }
 
 void SET_VOLT_DAC_2(float voltage)
@@ -1129,8 +1159,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
   SPI_Init(&hspi1,Size);//dac
   GPIOD->ODR |= (1 << 14);// set csbar high
-  DAC_command=WriteSpan_A<<16|0x0000;// set span to 0 to 5V
+  //DAC_command=WriteSpan_A<<16|0x0000;// set span to 0 to 5V
+  //
   HAL_SPI1_TransmitReceive_HM_fast(&hspi1,&DAC_command, pRxData, 1);
+
+  SET_SPAN_DAC_1(0);
+
   SET_VOLT_DAC_1(0.0);
 
   SPI_Init(&hspi2,Size);//adc
@@ -1143,7 +1177,7 @@ int main(void)
 
   while (1)
   {
-	  SET_VOLT_DAC_1(0.5);
+	  SET_VOLT_DAC_1(4.1);
 	  ADC_SPI(&hspi2, &pTxData[0], &ADC_1_Data_DB[0], 1); // read ADC
 	  switch (sm)
 	  {
