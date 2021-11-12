@@ -963,7 +963,7 @@ void SET_VOLT_DAC_1(float voltage)
 
 	dac_set = (voltage*dac_conv);
 	//dac_send = WriteCode_Update_A<<16|dac_set;
-	//GPIOB->ODR ^= (1 );
+	GPIOB->ODR ^= (1 );
 	if (DAC_MODEL == 2752)
 		{
 			dac_send = WriteCode_Update_A<<16|dac_set;
@@ -977,8 +977,15 @@ void SET_VOLT_DAC_1(float voltage)
 
 void SET_VOLT_DAC_1_bits(uint32_t send_dac_set)
 {
-	dac_send = WriteCode_Update_A<<16|send_dac_set;
+
 	//GPIOB->ODR ^= (1 );
+	if (DAC_MODEL == 2752)
+		{
+			dac_send = WriteCode_Update_A<<16|send_dac_set;
+		}
+	else if (DAC_MODEL == 2758){
+			dac_send = WriteCode_Update_A << 24 | send_dac_set<<6;
+	}
 	HAL_SPI1_TransmitReceive_HM_fast(&hspi1, &dac_send, pRxData, 1);
 }
 
@@ -999,24 +1006,43 @@ void SET_VOLT_DAC_2(float voltage)
 {
 
 	dac_set = (voltage*dac_conv);
-	dac_send = WriteCode_Update_B<<16|dac_set;
-	//GPIOB->ODR ^= (1 );
-
+	//dac_send = WriteCode_Update_A<<16|dac_set;
+	GPIOB->ODR ^= (1 );
+	if (DAC_MODEL == 2752)
+		{
+			dac_send = WriteCode_Update_B<<16|dac_set;
+		}
+	else if (DAC_MODEL == 2758){
+			dac_send = WriteCode_Update_B << 24 | dac_set<<6;
+	}
 
 	HAL_SPI1_TransmitReceive_HM_fast(&hspi1, &dac_send, pRxData, 1);
 }
 
 void SET_VOLT_DAC_2_bits(uint32_t send_dac_set)
 {
-	dac_send = WriteCode_Update_B<<16|send_dac_set;
+
 	//GPIOB->ODR ^= (1 );
+	if (DAC_MODEL == 2752)
+		{
+			dac_send = WriteCode_Update_B<<16|send_dac_set;
+		}
+	else if (DAC_MODEL == 2758){
+			dac_send = WriteCode_Update_B << 24 | send_dac_set<<6;
+	}
 	HAL_SPI1_TransmitReceive_HM_fast(&hspi1, &dac_send, pRxData, 1);
 }
 
 void SET_SPAN_DAC_2(uint8_t setspan)
 {
-	  DAC_command=WriteSpan_B<<16|setspan;
-	  HAL_SPI1_TransmitReceive_HM_fast(&hspi1,&DAC_command, pRxData, 1);
+	if (DAC_MODEL == 2752)
+		{
+			DAC_command=WriteSpan_B<<16|setspan;
+		}
+	else if (DAC_MODEL == 2758){
+		DAC_command=WriteSpan_B<<24| setspan << 8 ;
+	}
+	HAL_SPI1_TransmitReceive_HM_fast(&hspi1,&DAC_command, pRxData, 1);
 }
 
 void return_sm()
