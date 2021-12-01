@@ -16,6 +16,7 @@ import matplotlib.pyplot  as plt
 import struct
 
 ADC_conv_fac_ltc2377 = 5/4/(2**20 -1)
+ADC_conv_fac_ltc2380 = 10/(2**24 -1)
 DAC_conv_fac_ltc2785_16bit = 65535.0/5.0 #for range of 5V
 
 usb_commands ={
@@ -76,9 +77,51 @@ def float_bytearray_convert(value):
 
 def convert_multi_reads(num_run,ret,ADCR,conversion_fac=1):
 
+    '''
+    for ltc2377
     for i in range(num_run):
         ADCR.append( conversion_fac*\
             (ret[4*i+2]*16**4 + ret[4*i+1]*16**2 +ret[4*i]))
+    '''
+
+    for i in range(num_run):
+        #temp_value= 20.0/(2**24-1) * ( ret[4*i+2]*16**4 + ret[4*i+1]*16**2 +ret[4*i]) -10
+        temp_value = transfer_func_LTC2380( ret[4*i+2]*16**4 + ret[4*i+1]*16**2 +ret[4*i])
+        #temp_value = (temp_value +5.0)*2.5
+        ADCR.append( temp_value)
+
+    
+def transfer_func_LTC2380(digicode):
+    '''
+    Summary of the LTC2380 
+    011..111 -> 5V
+    ...
+    0x00 -> 0 volt
+    0xfff -> (0 - VLSB)volt
+    ...
+    100..00 -> -5V
+
+    int digicode: output code of ADC in decimal.
+
+    returns:
+    input voltage to the ADC
+    '''
+    FS= 12.05
+    VLSB = FS/(2**24)
+    maxcode = 2**24-1
+    if (digicode > maxcode):
+        raise ValueError('input out of range')
+    
+    if (digicode >= 2**23):
+        a = (FS/2 - VLSB)/(2**24 - 2**23)
+        b = -FS/2 -a*2**23
+    else:
+        a=FS/2/( (2**24-1)/2)
+        b=0.0
+    res = a*digicode +b
+    return res
+
+
 
 
 class controller_search():
@@ -183,8 +226,8 @@ class controller():
         #print(ret)
 
         convert_multi_reads(num_read,ret,ADCR,conversion_fac=ADC_conv_fac_ltc2377)
-        plt.plot(ADCR,'-o')
-        print(ADCR)
+        #plt.plot(ADCR,'-o')
+        print(np.mean(ADCR))
    
 
     def read_PID_1_buffer(self,num_read=1):
@@ -268,10 +311,12 @@ class controller():
             print('\n')
              
             convert_multi_reads(size_convert_const,ret,ADCR, conversion_fac=ADC_conv_fac_ltc2377 )
-        
+        #print(ret)
         print('size ADCR ', np.size(ADCR))
-        
-        plt.plot(ADCR,'-o')
+        #print(ADCR)
+        print(ADCR[2])
+        print(np.mean(ADCR))
+        #plt.plot(ADCR,'-o')
         plt.show()
         return ret
 
@@ -386,7 +431,7 @@ if __name__=="__main__":
     plt.show()
     '''
     ret = controller_1.read_ADC_1()
-    print(ret)
+    #print(ret)
 
     '''
     controller_1.PID_hold()

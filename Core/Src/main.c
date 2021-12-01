@@ -1203,8 +1203,8 @@ int main(void)
 
   while (1)
   {
-	  SET_VOLT_DAC_1(4.1);
-	  ADC_SPI(&hspi2, &pTxData[0], &ADC_1_Data_DB[0], 1); // read ADC
+	  SET_VOLT_DAC_1(3.0);
+	  //ADC_SPI(&hspi2, &pTxData[0], &ADC_1_Data_DB[0], 1); // read ADC
 	  switch (sm)
 	  {
 
@@ -1455,7 +1455,7 @@ static void MX_SPI2_Init(void)
   hspi2.Instance = SPI2;
   hspi2.Init.Mode = SPI_MODE_MASTER;
   hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi2.Init.DataSize = SPI_DATASIZE_20BIT;
+  hspi2.Init.DataSize = SPI_DATASIZE_24BIT;
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
