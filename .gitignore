@@ -42,6 +42,12 @@
 *.idb
 *.pdb
 
+# Python pyc
+*.pyc
+
+# Python scrapbooks or notebooks
+scrap_*.py
+
 # Kernel Module Compile Results
 *.mod*
 *.cmd
