@@ -14,6 +14,7 @@ import usb.util
 import numpy as np
 import matplotlib.pyplot  as plt
 import struct
+import logging
 
 ADC_conv_fac_ltc2377 = 5/4/(2**20 -1)
 ADC_conv_fac_ltc2380 = 10/(2**24 -1)
@@ -32,8 +33,8 @@ usb_commands ={
     "READ_ADC1": 0x07,
     "READ_ADC2": 0x09,
 
-    "TRANX_PID_1_CTRL" :				0X1A,
-    "TRANX_PID_2_CTRL" :				0X2A,
+    "TRANX_PID_1_CTRL" :				0x1A,
+    "TRANX_PID_2_CTRL" :				0x2A,
 
     "SET_P_1" : 0x0C,
     "SET_I_1" : 0x0D,
@@ -50,6 +51,9 @@ usb_commands ={
     "STOP_PID": 0xAF
     
 }
+
+
+
 def dec_hex(x):
     r0 = x % 16
     q0 = x//16
@@ -408,6 +412,47 @@ class controller():
         #self.cmd.append(int(num_run/1000))
         self.write_mess(self.cmd)
     
+    def returnSpanMode(self,spanmode):
+        span_modeCode = {
+            "0": "#unipolar 0 to 5V",
+            "1": "#unipolar 0 to 10V",
+            "2": "#bipolar -5V to 5V",
+            "3": "#bipolar -10V to 10V",
+            "4": "#bipolar -2.5V to 2.5V",
+            "5": "#bipolar 2.5V to 7.5V"
+        }
+        return span_modeCode[str(spanmode)]
+
+    def setDACSpan1(self,span):
+        '''
+        Set span of the DAC channel 1
+        span is an int from 0 to 5.
+        0x00, #unipolar 0 to 5V
+        0x01, # unipolar 0 to 10V
+        0x02, #bipolar -5V to 5V
+        0x03, #bipolar -10V to 10V
+        0x04, #bipolar -2.5V to 2.5V
+        0x05, #bipolar -2.5V to 7.5V
+        '''
+        if isinstance(span,int):
+            raise TypeError('span must be a number from 0 to 5')
+            return
+        if span<0 and span <5:
+            raise TypeError('span must be a number from 0 to 5')
+            return
+        else:
+            span_mode_str= self.returnSpanMode(spanmode)
+            logging.info(f'Set DAC channel 1 span to {span_mode_str}')
+            self.cmd = bytearray(b'')
+            self.cmd.append(usb_commands["SET_SPAN_1"])
+            self.cmd.append(span)
+            self.write_mess(self.cmd)
+
+    def setDACVolt1(voltage):
+        logging.info(f'Set DAC channel 1 to {voltage}')
+        self.cmd = bytearray(b'')
+        self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"])
+        pass
 
 if __name__=="__main__":
     ctrlist = search_ctr_boards()
