@@ -52,7 +52,27 @@ usb_commands ={
     
 }
 
-
+def int_to_bytearray(i):
+    '''
+    convert an int number to an array of bytes
+    first version: 32bit
+    
+    Params:
+    i: an int number >0 and < 2**32 -1
+    
+    return:
+    a byte array with size of 4
+    
+    Example:
+    int_to_bytearray(255) = b'\x00\x00\x00\xff'
+    
+    '''
+    if not isinstance(i,int):
+        raise TypeError('input must be an integer')
+    if i>(2**32-1):
+        raise ValueError('input must be smaller than 2*32-1')
+    bytearr = bytes(i.to_bytes(4,'big'))
+    return bytearr
 
 def dec_hex(x):
     r0 = x % 16
@@ -125,7 +145,32 @@ def transfer_func_LTC2380(digicode):
     res = a*digicode +b
     return res
 
-
+def convert_Vout_to_inputCode(Voltage,minVspan=0,maxVspan=5.0,numbits=18):
+    '''
+    This function is used to convert the desired Voltage to the 
+    input Code (int) that is sent to the DACs.
+    Different span setting would give different input code
+    
+    Params:
+    Voltage: the desired output Voltage
+    
+    minVspan: minimum Voltage of the span
+    maxVspan: maximum Voltage of the span
+    
+    returns:
+    inputCode
+    
+    Example:
+    convert_Vout_to_inputCode(5,minVspan=0, maxVspan=5) = 2**18 -1
+    '''
+    y0 = 2**numbits -1
+    a = y0/(maxVspan - minVspan)
+    b = -a*minVspan
+    
+    inputCode = a*Voltage + b
+    return inputCode
+    
+    
 
 
 class controller_search():
@@ -434,25 +479,36 @@ class controller():
         0x04, #bipolar -2.5V to 2.5V
         0x05, #bipolar -2.5V to 7.5V
         '''
-        if isinstance(span,int):
+        if not isinstance(span,int):
             raise TypeError('span must be a number from 0 to 5')
             return
         if span<0 and span <5:
             raise TypeError('span must be a number from 0 to 5')
             return
         else:
-            span_mode_str= self.returnSpanMode(spanmode)
+            span_mode_str= self.returnSpanMode(span)
             logging.info(f'Set DAC channel 1 span to {span_mode_str}')
             self.cmd = bytearray(b'')
             self.cmd.append(usb_commands["SET_SPAN_1"])
             self.cmd.append(span)
             self.write_mess(self.cmd)
 
-    def setDACVolt1(voltage):
+    def setDACMaxVolt1(self):
         logging.info(f'Set DAC channel 1 to {voltage}')
         self.cmd = bytearray(b'')
         self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"])
-        pass
+        self.cmd.append(0xFF)
+        self.cmd.append(0xFF)
+        self.cmd.append(0xFF)
+        self.write_mess(self.cmd)
+        
+    def setDACMinVolt1(self):
+        self.cmd = bytearray(b'')
+        self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"])
+        self.cmd.append(0x00)
+        self.cmd.append(0x00)
+        self.cmd.append(0x00)
+        self.write_mess(self.cmd)
 
 if __name__=="__main__":
     ctrlist = search_ctr_boards()

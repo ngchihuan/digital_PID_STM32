@@ -1203,7 +1203,7 @@ int main(void)
 
   while (1)
   {
-	  SET_VOLT_DAC_1(3.0);
+	  //SET_VOLT_DAC_1(3.0);
 	  //ADC_SPI(&hspi2, &pTxData[0], &ADC_1_Data_DB[0], 1); // read ADC
 	  switch (sm)
 	  {

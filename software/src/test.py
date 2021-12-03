@@ -19,6 +19,16 @@ def dec_hex(x):
 
     print(t2,t1)
     return (t1,t2)
+def test_raise():
+    a=0
+    raise TypeError
+    print('after raising typeerr')
+    return a
+
+def float_bytearray_convert(value):
+    ba = bytearray(struct.pack("f", value))  
+    return ba
+
 if __name__=='__main__':
     x=1000
     t1,t2=dec_hex(x)
@@ -27,8 +37,8 @@ if __name__=='__main__':
     msg.append(t2)
     print(msg)
 
-    import struct
-    value = -1.2345
-    ba = bytearray(struct.pack("f", value))  
-    print(ba)
-    print([ "0x%02x" % b for b in ba ])
+    res= test_raise()
+    print(f"res is {res}")
+
+    
+    
