@@ -15,6 +15,7 @@ import numpy as np
 import matplotlib.pyplot  as plt
 import struct
 import logging
+logging.basicConfig(level=logging.INFO)
 
 ADC_conv_fac_ltc2377 = 5/4/(2**20 -1)
 ADC_conv_fac_ltc2380 = 10/(2**24 -1)
@@ -160,7 +161,7 @@ def convert_Vout_to_inputCode(Voltage,minVspan=0,maxVspan=5.0,numbits=18):
     returns:
     inputCode
     
-    Example:
+    Examples:
     convert_Vout_to_inputCode(5,minVspan=0, maxVspan=5) = 2**18 -1
     '''
     y0 = 2**numbits -1
@@ -168,8 +169,12 @@ def convert_Vout_to_inputCode(Voltage,minVspan=0,maxVspan=5.0,numbits=18):
     b = -a*minVspan
     
     inputCode = a*Voltage + b
-    return inputCode
+    return int(inputCode)
     
+def int_to_bytearr(intnumber):
+    b = intnumber.to_bytes(4, 'big')
+    ba = bytearray(b)
+    return ba
     
 
 
@@ -231,6 +236,8 @@ class controller():
         self.cmds.append(0x00)
         self.cmds.append(0x00)
 
+        self.setDACSpan1(0)
+        self.setDACSpan2(0)
 
     def close_dev(self):
         print("Closing device")
@@ -459,16 +466,23 @@ class controller():
     
     def returnSpanMode(self,spanmode):
         span_modeCode = {
-            "0": "#unipolar 0 to 5V",
-            "1": "#unipolar 0 to 10V",
-            "2": "#bipolar -5V to 5V",
-            "3": "#bipolar -10V to 10V",
-            "4": "#bipolar -2.5V to 2.5V",
-            "5": "#bipolar 2.5V to 7.5V"
+            "0": ("#unipolar 0 to 5V", 0, 5),
+            "1": ("#unipolar 0 to 10V", 0, 10),
+            "2": ("#bipolar -5V to 5V", -5, 5),
+            "3": ("#bipolar -10V to 10V", -10, 10),
+            "4": ("#bipolar -2.5V to 2.5V", -2.5, 2.5),
+            "5": ("#bipolar 2.5V to 7.5V", 2.5, 7.5)
         }
         return span_modeCode[str(spanmode)]
 
     def setDACSpan1(self,span):
+        self.setDACSpan(span, channel = 1)
+        
+    def setDACSpan2(self,span):
+        self.setDACSpan(span, channel = 2)
+        
+        
+    def setDACSpan(self,span,channel = 1):
         '''
         Set span of the DAC channel 1
         span is an int from 0 to 5.
@@ -482,16 +496,27 @@ class controller():
         if not isinstance(span,int):
             raise TypeError('span must be a number from 0 to 5')
             return
-        if span<0 and span <5:
+        if span<0.0 or span >5.0:
             raise TypeError('span must be a number from 0 to 5')
             return
         else:
             span_mode_str= self.returnSpanMode(span)
-            logging.info(f'Set DAC channel 1 span to {span_mode_str}')
+            logging.info(f'Set DAC channel {channel} span to {span_mode_str[0]}')
             self.cmd = bytearray(b'')
-            self.cmd.append(usb_commands["SET_SPAN_1"])
+            if channel == 1:
+                self.cmd.append(usb_commands["SET_SPAN_1"])
+                self.minV_1 = span_mode_str[1]
+                self.maxV_1 = span_mode_str[2]
+            elif channel == 2:
+                self.cmd.append(usb_commands["SET_SPAN_2"])
+                self.minV_2 = span_mode_str[1]
+                self.maxV_2 = span_mode_str[2]
+            else:
+                logging.exception('Channel number must be 1 or 2')
+                return
             self.cmd.append(span)
             self.write_mess(self.cmd)
+ 
 
     def setDACMaxVolt1(self):
         logging.info(f'Set DAC channel 1 to {voltage}')
@@ -509,6 +534,40 @@ class controller():
         self.cmd.append(0x00)
         self.cmd.append(0x00)
         self.write_mess(self.cmd)
+
+    def setDACVolt1(self,voltage):
+        self.setDACVolt(voltage,channel =1)
+
+    def setDACVolt2(self,voltage):
+        self.setDACVolt(voltage,channel =2)
+
+    def setDACVolt(self,voltage,channel=1):
+        if not isinstance(voltage,float):
+            raise TypeError('voltage must be a number from 0 to 5')
+            return
+        if (voltage<= self.minV_1) or (voltage >=self.maxV_1):
+            raise TypeError('voltage is out of span. Set span again') 
+            return
+        else:
+            self.cmd = bytearray(b'')
+            if channel == 1:
+                self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"]) 
+                
+            elif channel == 2:
+                self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_2"]) 
+                
+            else:
+                logging.exception('Channel number must be 1 or 2')
+                return
+            
+            logging.info(f'Setting DAC {channel} Voltage to {voltage}')
+            inputCode = convert_Vout_to_inputCode(voltage, minVspan=self.minV_1, maxVspan=self.maxV_1)
+            ba = int_to_bytearr(inputCode)
+            self.cmd.append(ba[3])
+            self.cmd.append(ba[2])
+            self.cmd.append(ba[1])
+            self.write_mess(self.cmd)
+            
 
 if __name__=="__main__":
     ctrlist = search_ctr_boards()

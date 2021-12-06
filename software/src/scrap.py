@@ -4,20 +4,33 @@ from pid_controller import controller as pid
 from pid_controller import search_ctr_boards
 from pid_controller import int_to_bytearray
 from pid_controller import *
+import time
 
-ctrlist = search_ctr_boards()
-controller_1 = pid(ctrlist[0])
-controller_1.PID_hold()
-controller_1.setDACSpan1(2)
-controller_1.setDACMinVolt1()
+def test_pid():
+    ctrlist = search_ctr_boards()
+    controller_1 = pid(ctrlist[0])
+    controller_1.PID_hold()
 
-res = int_to_bytearray(255)
-print(res)
-print(res[0])
 
-V=[-5 ,0 ,5]
-inputCode=[]
-for v in V:
-    res = convert_Vout_to_inputCode(v,minVspan=-5)
-    inputCode.append(res)
-    print(f"input code of {v} Volts is {res}")
+    controller_1.setDACSpan1(0)
+    controller_1.setDACVolt1(4.0)
+    
+    time.sleep(5)
+    controller_1.setDACSpan1(2)
+    controller_1.setDACVolt1(-1.0)
+    
+    time.sleep(5)
+    controller_1.setDACSpan1(3)
+    controller_1.setDACVolt1(-10.0)
+    
+    time.sleep(5)
+    controller_1.setDACSpan1(0)
+    controller_1.setDACVolt1(-10.0)
+
+a=2**18-1
+b = a.to_bytes(4,'big')
+ba = bytearray(b)
+print(ba)
+print(ba[0])
+
+test_pid()
