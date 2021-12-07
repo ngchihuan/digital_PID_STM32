@@ -176,7 +176,16 @@ def int_to_bytearr(intnumber):
     ba = bytearray(b)
     return ba
     
-
+def returnSpanMode(spanmode):
+    span_modeCode = {
+        "0": ("#unipolar 0 to 5V", 0, 5),
+        "1": ("#unipolar 0 to 10V", 0, 10),
+        "2": ("#bipolar -5V to 5V", -5, 5),
+        "3": ("#bipolar -10V to 10V", -10, 10),
+        "4": ("#bipolar -2.5V to 2.5V", -2.5, 2.5),
+        "5": ("#bipolar 2.5V to 7.5V", 2.5, 7.5)
+    }
+    return span_modeCode[str(spanmode)]
 
 class controller_search():
     def __init__(self):
@@ -328,7 +337,13 @@ class controller():
          #plt.show()
          return output_processed,control_processed
 
-    def read_ADC_1(self,num_run=1):
+    def read_ADC1(self,num_run=1):
+        self.read_ADC(num_run = num_run,channel =1)
+        
+    def read_ADC2(self, num_run =1):
+        self.read_ADC(num_run = num_run,channel =2)
+
+    def read_ADC(self,num_run=1, channel =1):
         #try num_run>0 & num_run<100
         '''
         num_run is a multiple of 512 runs
@@ -337,7 +352,14 @@ class controller():
         '''
         print('Reading ADC for ',num_run*512)
         self.cmd = bytearray(b'')
-        self.cmd.append(0x07)
+        if channel ==1 :
+            self.cmd.append(usb_commands["READ_ADC1"])
+        elif channel == 2:
+            self.cmd.append(usb_commands["READ_ADC2"])
+        else:
+            logging.raiseExceptions("channel must be 1 or 2")
+            return 
+        
         self.cmd.append(num_run)
         self.cmd.append(0x00)
         self.cmd.append(0x00)
@@ -464,34 +486,67 @@ class controller():
         #self.cmd.append(int(num_run/1000))
         self.write_mess(self.cmd)
     
-    def returnSpanMode(self,spanmode):
-        span_modeCode = {
-            "0": ("#unipolar 0 to 5V", 0, 5),
-            "1": ("#unipolar 0 to 10V", 0, 10),
-            "2": ("#bipolar -5V to 5V", -5, 5),
-            "3": ("#bipolar -10V to 10V", -10, 10),
-            "4": ("#bipolar -2.5V to 2.5V", -2.5, 2.5),
-            "5": ("#bipolar 2.5V to 7.5V", 2.5, 7.5)
-        }
-        return span_modeCode[str(spanmode)]
+
 
     def setDACSpan1(self,span):
-        self.setDACSpan(span, channel = 1)
-        
-    def setDACSpan2(self,span):
-        self.setDACSpan(span, channel = 2)
-        
-        
-    def setDACSpan(self,span,channel = 1):
         '''
         Set span of the DAC channel 1
         span is an int from 0 to 5.
+        
+        
         0x00, #unipolar 0 to 5V
         0x01, # unipolar 0 to 10V
         0x02, #bipolar -5V to 5V
         0x03, #bipolar -10V to 10V
         0x04, #bipolar -2.5V to 2.5V
         0x05, #bipolar -2.5V to 7.5V
+        
+        Examples:
+        To set the output span of DAC channel 1 to -5 to 5V:
+        setDACSpan1(2,channel=1)
+        
+        '''
+        self.setDACSpan(span, channel = 1)
+        
+    def setDACSpan2(self,span):
+        '''
+        Set span of the DAC channel 1
+        span is an int from 0 to 5.
+        
+        
+        0x00, #unipolar 0 to 5V
+        0x01, # unipolar 0 to 10V
+        0x02, #bipolar -5V to 5V
+        0x03, #bipolar -10V to 10V
+        0x04, #bipolar -2.5V to 2.5V
+        0x05, #bipolar -2.5V to 7.5V
+        
+        Examples:
+        To set the output span of DAC channel 1 to -5 to 5V:
+        setDACSpan2(2,channel=1)
+        
+        '''
+        self.setDACSpan(span, channel = 2)
+        
+        
+    def setDACSpan(self,span,channel = 1):
+        '''
+        Set span of the DAC channel
+        span is an int from 0 to 5.
+        
+        channel is the DAC channel
+        
+        0x00, #unipolar 0 to 5V
+        0x01, # unipolar 0 to 10V
+        0x02, #bipolar -5V to 5V
+        0x03, #bipolar -10V to 10V
+        0x04, #bipolar -2.5V to 2.5V
+        0x05, #bipolar -2.5V to 7.5V
+        
+        Examples:
+        To set the output span of DAC channel 1 to -5 to 5V:
+        setDACSpan(2,channel=1)
+        
         '''
         if not isinstance(span,int):
             raise TypeError('span must be a number from 0 to 5')
@@ -500,7 +555,7 @@ class controller():
             raise TypeError('span must be a number from 0 to 5')
             return
         else:
-            span_mode_str= self.returnSpanMode(span)
+            span_mode_str= returnSpanMode(span)
             logging.info(f'Set DAC channel {channel} span to {span_mode_str[0]}')
             self.cmd = bytearray(b'')
             if channel == 1:
@@ -516,24 +571,6 @@ class controller():
                 return
             self.cmd.append(span)
             self.write_mess(self.cmd)
- 
-
-    def setDACMaxVolt1(self):
-        logging.info(f'Set DAC channel 1 to {voltage}')
-        self.cmd = bytearray(b'')
-        self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"])
-        self.cmd.append(0xFF)
-        self.cmd.append(0xFF)
-        self.cmd.append(0xFF)
-        self.write_mess(self.cmd)
-        
-    def setDACMinVolt1(self):
-        self.cmd = bytearray(b'')
-        self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"])
-        self.cmd.append(0x00)
-        self.cmd.append(0x00)
-        self.cmd.append(0x00)
-        self.write_mess(self.cmd)
 
     def setDACVolt1(self,voltage):
         self.setDACVolt(voltage,channel =1)
@@ -545,7 +582,7 @@ class controller():
         if not isinstance(voltage,float):
             raise TypeError('voltage must be a number from 0 to 5')
             return
-        if (voltage<= self.minV_1) or (voltage >=self.maxV_1):
+        if (voltage< self.minV_1) or (voltage >self.maxV_1):
             raise TypeError('voltage is out of span. Set span again') 
             return
         else:

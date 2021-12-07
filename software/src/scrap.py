@@ -13,19 +13,17 @@ def test_pid():
 
 
     controller_1.setDACSpan1(0)
-    controller_1.setDACVolt1(4.0)
+    controller_1.setDACVolt1(4.321)
     
     time.sleep(5)
     controller_1.setDACSpan1(2)
-    controller_1.setDACVolt1(-1.0)
+    controller_1.setDACVolt1(-1.23)
     
     time.sleep(5)
     controller_1.setDACSpan1(3)
     controller_1.setDACVolt1(-10.0)
     
-    time.sleep(5)
-    controller_1.setDACSpan1(0)
-    controller_1.setDACVolt1(-10.0)
+
 
 a=2**18-1
 b = a.to_bytes(4,'big')
