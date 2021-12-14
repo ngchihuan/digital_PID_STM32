@@ -235,6 +235,8 @@ class controller():
         if self.dev.is_kernel_driver_active(0):
             self.reattach = True
             self.dev.detach_kernel_driver(0)
+        else:
+            self.reattach = False
         #self.sm = self.get_sm()
         #self.PID_start()
         
@@ -247,9 +249,13 @@ class controller():
 
         self.setDACSpan1(0)
         self.setDACSpan2(0)
+    
+    def __str__(self) -> str:
+        return str(usb.util.get_string( self.dev, self.dev.iSerialNumber ))
+        
 
     def close_dev(self):
-        print("Closing device")
+        logging.info("Closing device")
         usb.util.dispose_resources(self.dev)
 
         if self.reattach:
@@ -579,26 +585,34 @@ class controller():
         self.setDACVolt(voltage,channel =2)
 
     def setDACVolt(self,voltage,channel=1):
+        #THERE ARE TOO MANY IF-ELSE LOOPS. NEED TO REFACTOR
         if not isinstance(voltage,float):
             raise TypeError('voltage must be a number from 0 to 5')
             return
-        if (voltage< self.minV_1) or (voltage >self.maxV_1):
-            raise TypeError('voltage is out of span. Set span again') 
-            return
+
         else:
             self.cmd = bytearray(b'')
             if channel == 1:
-                self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"]) 
-                
+                if (voltage< self.minV_1) or (voltage >self.maxV_1):
+                    raise TypeError('voltage is out of span. Set span again') 
+                    return
+                else:
+                    self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_1"]) 
+                    inputCode = convert_Vout_to_inputCode(voltage, minVspan=self.minV_1, maxVspan=self.maxV_1)    
             elif channel == 2:
-                self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_2"]) 
+                if (voltage< self.minV_2) or (voltage >self.maxV_2):
+                    raise TypeError('voltage is out of span. Set span again') 
+                    return
+                else:
+                    self.cmd.append(usb_commands["SET_OUTPUT_VOLTAGE_2"]) 
+                    inputCode = convert_Vout_to_inputCode(voltage, minVspan=self.minV_2, maxVspan=self.maxV_2)
                 
             else:
                 logging.exception('Channel number must be 1 or 2')
                 return
             
             logging.info(f'Setting DAC {channel} Voltage to {voltage}')
-            inputCode = convert_Vout_to_inputCode(voltage, minVspan=self.minV_1, maxVspan=self.maxV_1)
+            
             ba = int_to_bytearr(inputCode)
             self.cmd.append(ba[3])
             self.cmd.append(ba[2])

@@ -1,44 +1,26 @@
-import struct
-def dec_hex(x):
-    r0 = x % 16
-    q0 = x//16
+from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import QObject,pyqtSlot
 
-    r1= q0 % 16
-    q1 = q0 //16
 
-    r2= q1 % 16
-    q2 = q1 //16
+class test_window(QtWidgets.QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        layout = QtWidgets.QGridLayout()
+        self.setLayout(layout)
+        self.chooseDevice = QtWidgets.QComboBox()
+        layout.addWidget(self.chooseDevice)
+        
+        deviceList = ['hello','how','are']
+        for i in deviceList:
+            self.chooseDevice.addItem(str(i))
+            
+        self.chooseDevice.currentIndexChanged.connect(self.comboSlot)
 
-    r3= q2 % 16
-    q3 = q2 //16
-
-    print(r3,r2,r1,r0)
-
-    t1 = r0 + 16*r1
-    t2= r2+ r3*16
-
-    print(t2,t1)
-    return (t1,t2)
-def test_raise():
-    a=0
-    raise TypeError
-    print('after raising typeerr')
-    return a
-
-def float_bytearray_convert(value):
-    ba = bytearray(struct.pack("f", value))  
-    return ba
-
-if __name__=='__main__':
-    x=1000
-    t1,t2=dec_hex(x)
-    msg = bytearray(b'')
-    msg.append(t1)
-    msg.append(t2)
-    print(msg)
-
-    res= test_raise()
-    print(f"res is {res}")
-
-    
-    
+    def comboSlot(self,i):
+        print('slot activated')
+        print(f'index {i} with text {self.chooseDevice.currentText()} is chosen')
+if __name__ == '__main__':
+    app = QtWidgets.QApplication([])
+    window = test_window()
+    window.show()
+    app.exec_()

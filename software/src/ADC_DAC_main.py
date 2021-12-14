@@ -4,6 +4,11 @@ from PyQt5.QtCore import QObject,pyqtSlot
 from pid_controller import DAC_conv_fac_ltc2785_16bit
 from pid_controller import returnSpanMode
 from pid_controller import search_ctr_boards
+from pid_controller import controller
+import usb.util
+
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class ADC_DAC(QtWidgets.QWidget):
     
@@ -50,21 +55,56 @@ class ADC_DAC(QtWidgets.QWidget):
         layout.addWidget(self.device_box,2,0)
         
         #list device
+        self.activeDevice = None
         self.update_device_list()
+        
+        self.connect_button.clicked.connect(self.connectDeviceSlot)
+        self.disconnect_button.clicked.connect(self.closeDevice)
+        self.search_button.clicked.connect(self.update_device_list)
+        
+        self.dac1.setVoltInput.valueChanged.connect(self.updateVolt1)
+        self.dac1.setSpanInput.valueChanged.connect(self.updateSpan1)
+        
+        self.dac2.setVoltInput.valueChanged.connect(self.updateVolt2)
+        self.dac2.setSpanInput.valueChanged.connect(self.updateSpan2)
         
         #self.comboSerialBox.currentText()
     def update_device_list(self):
-        ctrlist = search_ctr_boards()
-        if len(ctrlist)!=0:
-            for i in ctrlist:
-                self.deviceComboBox.addItem(i)
+        self.ctrlist = search_ctr_boards()
+        if len(self.ctrlist) >0 :
+            for i in self.ctrlist:
+                #print ( usb.util.get_string( i, i.iSerialNumber ))
+                self.deviceComboBox.addItem(str(usb.util.get_string( i, i.iSerialNumber )))
                 
                 
-    
-    def updateVolt(self):
-        print('test')
+    def connectDeviceSlot(self):
+        logging.info(self.deviceComboBox.currentText())
+        logging.info(self.deviceComboBox.currentIndex())
         
-
+        #Close the current device before connect to the new device\
+        self.closeDevice()
+        
+        currentIndex = self.deviceComboBox.currentIndex()
+        self.activeDevice = controller(self.ctrlist[currentIndex])
+                
+    def closeDevice(self):
+        if self.activeDevice!= None:
+            self.activeDevice.close_dev()
+            self.activeDevice = None
+    
+    def updateVolt1(self,voltage):
+        #logging.info(f'DAC channel 1 voltage is updated to {voltage}')
+        self.activeDevice.setDACVolt1(voltage)
+        
+    def updateVolt2(self,voltage):
+            #logging.info(f'DAC channel 1 voltage is updated to {voltage}')
+        self.activeDevice.setDACVolt2(voltage)
+        
+    def updateSpan1(self,spanmode):
+        self.activeDevice.setDACSpan1(spanmode)
+        
+    def updateSpan2(self,spanmode):
+        self.activeDevice.setDACSpan2(spanmode)
 
         #self.device_box= 1.0
         #self.device_box.setTitle("Device")
@@ -126,6 +166,9 @@ class DAC(QObject):
         
         self.minV_label.setText(str(ret_spanMode[1]))
         self.maxV_label.setText(str(ret_spanMode[2]))
+        
+        self.setVoltInput.setMaximum(self.maxV)
+        self.setVoltInput.setMinimum(self.minV)
         
 if __name__ == '__main__':
     app = QtWidgets.QApplication([])
